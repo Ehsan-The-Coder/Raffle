@@ -1,11 +1,10 @@
 // SPDX-License-Identifier:MIT
-pragma solidity 0.8.20;
+pragma solidity ^0.8.18;
 
 //<-----------------------------imports--------------------------->
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {AutomationCompatible} from "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title Raffle the decentralized way of buying lottery
@@ -13,7 +12,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  * @notice This project uses the chainlink VRF(Verifiable Random Function) & Upkeeps
  * to get the true  random number and automatically chosen the winner after the interval is passed
  */
-contract Raffle is VRFConsumerBaseV2, AutomationCompatible, ReentrancyGuard {
+contract Raffle is VRFConsumerBaseV2, AutomationCompatible {
     //<-----------------------------type declarations--------------------------->
     //help to check wether the winner is being chosen
     //or available for entrance
@@ -40,7 +39,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible, ReentrancyGuard {
     //
     //
     //chainlink essentail variable for VRF and Automations
-    VRFCoordinatorV2Interface private immutable i_vrfCoordinatorV2Interface;
+    VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     uint64 private immutable i_subscriptionId;
     bytes32 private immutable i_keyHash;
     uint32 private immutable i_callBackGasLimit;
@@ -48,7 +47,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible, ReentrancyGuard {
     uint8 private constant NUM_OF_WORDS = 1;
 
     //<-----------------------------event--------------------------->
-    event RaffleEntered(address indexed buyer);
+    event RaffleEntered(address indexed player);
     event RequestedRaffleWinnner(uint256 requestId);
     event WinnerPicked(address indexed recentWinner);
 
@@ -104,9 +103,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible, ReentrancyGuard {
         i_entranceFee = entranceFee;
         i_interval = interval;
         s_raffleState = RaffleState.OPEN;
-        i_vrfCoordinatorV2Interface = VRFCoordinatorV2Interface(
-            vrfCoordinatorV2Interface
-        );
+        i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2Interface);
         i_subscriptionId = subscriptionId;
         i_keyHash = keyHash;
         i_callBackGasLimit = callBackGasLimit;
@@ -129,7 +126,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible, ReentrancyGuard {
      */
     function performUpkeep(bytes calldata) external override isUpkeepNeeded {
         s_raffleState = RaffleState.CALCULATING;
-        uint256 requestId = i_vrfCoordinatorV2Interface.requestRandomWords(
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_keyHash,
             i_subscriptionId,
             REQUEST_CONFIRMATIONS,
@@ -146,6 +143,10 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible, ReentrancyGuard {
 
     function getPlayers() external view returns (address[] memory) {
         return s_players;
+    }
+
+    function getPlayersLength() external view returns (uint256) {
+        return s_players.length;
     }
 
     function getEntranceFee() external view returns (uint256) {
@@ -168,12 +169,12 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible, ReentrancyGuard {
         return s_raffleState;
     }
 
-    function getVRFCoordinatorV2Interface()
+    function getVRFCoordinator()
         external
         view
         returns (VRFCoordinatorV2Interface)
     {
-        return i_vrfCoordinatorV2Interface;
+        return i_vrfCoordinator;
     }
 
     function getSubscriptionId() external view returns (uint64) {
@@ -202,13 +203,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible, ReentrancyGuard {
      * Each ticket costs the entrance fee specified during contract deployment.
      * Users can enter the raffle multiple times, each time purchasing a new ticket.
      */
-    function enterRaffle()
-        public
-        payable
-        nonReentrant
-        isEnoughEth
-        isRaffleOpen
-    {
+    function enterRaffle() public payable isEnoughEth isRaffleOpen {
         s_players.push(msg.sender);
         emit RaffleEntered(msg.sender);
     }
@@ -234,6 +229,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible, ReentrancyGuard {
         bool hasPlayers = (s_players.length > i_minNoOfPlayers);
         bool hasBalance = (address(this).balance > 0);
         upkeepNeeded = (isOpen && timePassed && hasPlayers && hasBalance);
+        return (upkeepNeeded, "0x0");
     }
 
     //<-----------------------------internal functions--------------------------->
@@ -253,12 +249,12 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible, ReentrancyGuard {
         s_players = new address payable[](0);
         s_raffleState = RaffleState.OPEN;
         s_lastTimestamp = block.timestamp;
+        emit WinnerPicked(s_recentWinner);
         (bool success, ) = s_recentWinner.call{value: address(this).balance}(
             ""
         );
         if (!success) {
             revert Raffle__TransferFailed();
         }
-        emit WinnerPicked(s_recentWinner);
     }
 }

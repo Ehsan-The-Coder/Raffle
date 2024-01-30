@@ -1,6 +1,8 @@
 [profile.default]
+auto_detect_solc = true
+# Do not include the 'solc' variable
 src = "src"
 out = "out"
 libs = ["lib"]
-remappings=["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/","@chainlink/contracts/=lib/chainlink-brownie-contracts/contracts/"]
+remappings=["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/","@chainlink/contracts/=lib/chainlink-brownie-contracts/contracts/","@solmate=lib/solmate/src/"]
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
