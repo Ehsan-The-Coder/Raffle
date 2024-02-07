@@ -9,23 +9,25 @@ import {LinkToken} from "../deploy/mock/src/LinkToken.sol";
 contract FundSubscription is Script {
     uint96 public constant FUND_AMOUNT = 3 ether;
 
-    function fundSubscriptionUsingHelperConfig() public {
+    function fundSubscriptionUsingConfig() public {
         (
             address vrfCoordinator,
             uint64 subscriptionId,
-            address link
+            address link,
+            uint256 deployerKey
         ) = getHelperVariables();
 
-        fundSubscription(vrfCoordinator, subscriptionId, link);
+        fundSubscription(vrfCoordinator, subscriptionId, link, deployerKey);
     }
 
     function fundSubscription(
         address vrfCoordinator,
         uint64 subscriptionId,
-        address link
+        address link,
+        uint256 deployerKey
     ) public {
         if (block.chainid == 31337) {
-            vm.startBroadcast();
+            vm.startBroadcast(deployerKey);
             VRFCoordinatorV2Mock(vrfCoordinator).fundSubscription(
                 subscriptionId,
                 FUND_AMOUNT
@@ -40,6 +42,7 @@ contract FundSubscription is Script {
             );
             vm.stopBroadcast();
         }
+
         console.log("Subscription is funded....");
         console.log("SubscriptionId: ", subscriptionId);
         console.log("VRFCoordinatorV2: ", vrfCoordinator);
@@ -48,26 +51,29 @@ contract FundSubscription is Script {
     }
 
     function run() external {
-        fundSubscriptionUsingHelperConfig();
+        fundSubscriptionUsingConfig();
     }
 
     function getHelperVariables()
         private
-        returns (address vrfCoordinator, uint64 subscriptionId, address link)
+        returns (
+            address vrfCoordinator,
+            uint64 subscriptionId,
+            address link,
+            uint256 deployerKey
+        )
     {
         HelperConfig helperConfig = new HelperConfig();
 
         (
             ,
             ,
-            ,
-            ,
-            /*network*/
             vrfCoordinator,
             subscriptionId,
             ,
             ,
-            link
+            link,
+            deployerKey
         ) = helperConfig.activeNetworkConfig();
     }
 }

@@ -9,8 +9,6 @@ error HelperConfig__ChainIdNotAvailable(uint256 chainId);
 
 contract HelperConfig is Script {
     struct NetworkConfig {
-        string network;
-        uint256 minNoOfPlayers; //minimum player needed for withdraw
         uint256 entranceFee; //fee to enter in raffle
         uint256 interval; //time in seconds
         address vrfCoordinator;
@@ -18,9 +16,12 @@ contract HelperConfig is Script {
         bytes32 keyHash; //GasLane
         uint32 callBackGasLimit; //in gwei
         address link;
+        uint256 deployerKey;
     }
 
     NetworkConfig public activeNetworkConfig;
+    uint256 public constant DEFAULT_ANVIL_PRIVATE_KEY =
+        0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
 
     constructor() {
         if (block.chainid == 11155111) {
@@ -34,14 +35,11 @@ contract HelperConfig is Script {
 
     function getSepoliaEthConfig()
         public
-        pure
         returns (NetworkConfig memory networkConfig)
     {
         networkConfig = NetworkConfig({
-            network: "sepolia",
-            minNoOfPlayers: 2,
             entranceFee: 0.01 ether,
-            interval: 30,
+            interval: 60 * 60, //one hour
             vrfCoordinator: 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625,
             subscriptionId: 5281,
             keyHash: bytes32(
@@ -52,7 +50,8 @@ contract HelperConfig is Script {
                 )
             ),
             callBackGasLimit: 600000,
-            link: 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625
+            link: 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625,
+            deployerKey: vm.envUint("METAMASK_PRIVATE_KEY_1")
         });
     }
 
@@ -61,8 +60,6 @@ contract HelperConfig is Script {
         returns (NetworkConfig memory networkConfig)
     {
         networkConfig = NetworkConfig({
-            network: "Anvil",
-            minNoOfPlayers: 5,
             entranceFee: 1 ether,
             interval: 60 * 60, //one hour
             vrfCoordinator: deployVRFCoordinatorV2MockAndReturnAddress(),
@@ -75,7 +72,8 @@ contract HelperConfig is Script {
                 )
             ),
             callBackGasLimit: 600000,
-            link: deployLinkTokenMockAndReturnAddress()
+            link: deployLinkTokenMockAndReturnAddress(),
+            deployerKey: DEFAULT_ANVIL_PRIVATE_KEY
         });
     }
 

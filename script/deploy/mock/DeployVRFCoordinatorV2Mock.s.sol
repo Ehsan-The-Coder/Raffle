@@ -21,8 +21,4 @@ contract DeployVRFCoordinatorV2Mock is Script {
         );
         vm.stopBroadcast();
     }
-
-    function test() external {
-        //created only to ignore the forge coverage
-    }
 }

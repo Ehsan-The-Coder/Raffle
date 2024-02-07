@@ -6,41 +6,41 @@ import {Script, console} from "forge-std/Script.sol";
 import {HelperConfig} from "../deploy/HelperConfig.s.sol";
 
 contract CreateSubscription is Script {
-    function createSubscriptionUsingHelperConfig()
+    function createSubscriptionUsingConfig()
         public
         returns (uint64 subscriptionId)
     {
-        subscriptionId = createSubscription(getVRFCoordinator());
+        (address vrfCoordinator, uint256 deployerKey) = getHelperVariables();
+        subscriptionId = createSubscription(vrfCoordinator, deployerKey);
     }
 
     function createSubscription(
-        address vrfCoordinator
+        address vrfCoordinator,
+        uint256 deployerKey
     ) public returns (uint64 subscriptionId) {
-        vm.startBroadcast();
+        vm.startBroadcast(deployerKey);
         subscriptionId = VRFCoordinatorV2Mock(vrfCoordinator)
             .createSubscription();
-        console.log("Subscription is created & id is:", subscriptionId);
         vm.stopBroadcast();
+
+        console.log("Subscription is created...");
+        console.log("ChainId: ", block.chainid);
+        console.log("deployerKey: ", deployerKey);
+        console.log("SubscriptionId: ", subscriptionId);
+        console.log("VRF Coordinator: ", vrfCoordinator);
     }
 
-    function getVRFCoordinator() private returns (address vrfCoordinator) {
+    function getHelperVariables()
+        private
+        returns (address vrfCoordinator, uint256 deployerKey)
+    {
         HelperConfig helperConfig = new HelperConfig();
 
-        (
-            ,
-            ,
-            ,
-            ,
-            /*network*/
-            vrfCoordinator,
-            ,
-            ,
-            ,
-
-        ) = helperConfig.activeNetworkConfig();
+        (, , vrfCoordinator, , , , , deployerKey) = helperConfig
+            .activeNetworkConfig();
     }
 
     function run() external returns (uint64 subId) {
-        subId = createSubscriptionUsingHelperConfig();
+        subId = createSubscriptionUsingConfig();
     }
 }

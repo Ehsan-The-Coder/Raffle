@@ -23,9 +23,10 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible {
 
     //<-----------------------------state variables--------------------------->
     //raffle variables
-    address[] private s_players;
+
     //how many players atleast have before withdraw
-    uint256 private immutable i_minNoOfPlayers;
+    uint256 private constant MIN_NO_OF_PLAYERS = 2;
+    address[] private s_players;
     uint256 private immutable i_entranceFee;
     //time period after which the raffle automattically withdraws
     //withdraw time =current timestamp+interval
@@ -48,7 +49,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible {
 
     //<-----------------------------event--------------------------->
     event RaffleEntered(address indexed player);
-    event RequestedRaffleWinnner(uint256 requestId);
+    event RequestedRaffleWinnner(uint256 indexed requestId);
     event WinnerPicked(address indexed recentWinner);
 
     //<-----------------------------custom error--------------------------->
@@ -91,7 +92,6 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible {
 
     //<-----------------------------special functions--------------------------->
     constructor(
-        uint256 minNoOfPlayers,
         uint256 entranceFee,
         uint256 interval,
         address vrfCoordinatorV2Interface,
@@ -99,7 +99,6 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible {
         bytes32 keyHash,
         uint32 callBackGasLimit
     ) VRFConsumerBaseV2(vrfCoordinatorV2Interface) {
-        i_minNoOfPlayers = minNoOfPlayers;
         i_entranceFee = entranceFee;
         i_interval = interval;
         s_raffleState = RaffleState.OPEN;
@@ -107,6 +106,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible {
         i_subscriptionId = subscriptionId;
         i_keyHash = keyHash;
         i_callBackGasLimit = callBackGasLimit;
+        s_lastTimestamp = block.timestamp;
     }
 
     receive() external payable {
@@ -154,7 +154,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible {
     }
 
     function getMinimumPlayer() external view returns (uint256) {
-        return i_minNoOfPlayers;
+        return MIN_NO_OF_PLAYERS;
     }
 
     function getInterval() external view returns (uint256) {
@@ -179,6 +179,14 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible {
 
     function getSubscriptionId() external view returns (uint64) {
         return i_subscriptionId;
+    }
+
+    function getLastTimestamp()
+        external
+        view
+        returns (uint256 lastTimeWithdraw)
+    {
+        lastTimeWithdraw = s_lastTimestamp;
     }
 
     function getKeyHash() external view returns (bytes32) {
@@ -226,7 +234,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatible {
     {
         bool isOpen = (s_raffleState == RaffleState.OPEN);
         bool timePassed = ((block.timestamp - s_lastTimestamp) > i_interval);
-        bool hasPlayers = (s_players.length > i_minNoOfPlayers);
+        bool hasPlayers = (s_players.length > MIN_NO_OF_PLAYERS);
         bool hasBalance = (address(this).balance > 0);
         upkeepNeeded = (isOpen && timePassed && hasPlayers && hasBalance);
         return (upkeepNeeded, "0x0");
